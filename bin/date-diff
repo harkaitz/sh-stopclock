@@ -1,0 +1,113 @@
+#!/bin/sh -e
+##:
+#h: Usage: date-diff [-S|M|H|D] TIME1 [TIME2 (default now)] ...
+#h:
+#h: Print the sum of all time differences sum(abs(TIME2-TIME1),...) and
+#h: return it in seconds (-S) minutes (-M) hours (-H) or days (-D), or
+#h: a combination (default).
+#h:
+#h: Examples:
+#h:
+#h:   $ date-diff 08:46 14:44 15:52
+#h:   0 days 6 hours 14 minutes 5 seconds
+#h:   $ date-diff -M 08:46 14:44
+#h:   358
+#h:   $ date-diff 2025-03-01 2025-04-01
+#h:   30 days 23 hours 0 minutes 0 seconds   <- Summer time change -1h
+#h:
+#h: The time is parsed using date(1), read it's manual to know it's
+#h: format. The difference is calculated using the seconds since epoch.
+#L:
+#l: Copyright (c) 2025 Harkaitz Agirre - All rights reserved.
+##:
+date_diff() {
+    local OPTIND=1 optopt fmt= secs=0 s1 s2 mins hours days
+    
+    ## Command line arguments.
+    while getopts "SMHD" optopt; do # OPTARG
+        case $optopt in
+            S|M|H|D) fmt="${optopt}";;
+            \?)      return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+    ##
+    while test -n "$1"; do
+
+        s1="$(date -d "$1" '+%s')"
+        test -n "$s1"
+
+        if test -n "$2"; then
+            s2="$(date -d "$2" '+%s')"
+            test -n "$s2"
+            shift 2
+        else
+            s2="$(date '+%s')"
+            shift 1
+        fi
+        
+        if test "$s1" -gt "$s2"; then
+            secs=$(( secs + s1 - s2 ))
+        else
+            secs=$(( secs + s2 - s1 ))
+        fi
+        
+    done
+    
+    ##
+    if test @"${fmt}" = @"S"; then
+        echo "${secs}"
+        return 0
+    fi
+
+    ##
+    mins=$(( secs / 60 ))
+    if test @"${fmt}" = @"M"; then
+        echo "${mins}"
+        return 0
+    fi
+
+    ##
+    hours=$(( mins / 60 ))
+    if test @"${fmt}" = @"H"; then
+        echo "${hours}"
+        return 0
+    fi
+
+    ##
+    days=$(( hours / 24 ))
+    if test @"${fmt}" = @"D"; then
+        echo "${days}"
+        return 0
+    fi
+
+    ##
+    if test ! -n "${fmt}"; then
+        local n_days n_hours n_mins n_secs
+        secs=$((  secs  - ( mins  * 60 ) ))
+        mins=$((  mins  - ( hours * 60 ) ))
+        hours=$(( hours - ( days  * 24 ) ))
+        date_diff_print "${days}"  day    ' '
+        date_diff_print "${hours}" hour   ' '
+        date_diff_print "${mins}"  minute ' '
+        date_diff_print "${secs}"  second '\n'
+        return 0
+    fi
+    
+    ##
+}
+date_diff_print() {
+    case "$1" in
+        1) printf "%s %s${3}"  "$1" "$2";;
+        *) printf "%s %ss${3}" "$1" "$2";;
+    esac
+}
+# --------------------------------------------------------------------
+if test @"${SCRNAME:-$(basename "$0")}" = @"date-diff"; then
+    MSYS_NO_PATHCONV=1
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#[hlL]: \{0,1\}//p' "$0";;
+        *)         date_diff "$@"; exit 0;;
+    esac
+fi

@@ -1,0 +1,54 @@
+#!/bin/sh -e
+##:
+#h: Usage: stopclock [-S|M|H|D] [-s] [-n default]
+#h:
+#h: A stopwatch for the terminal. Init measuring time with "-s", then
+#h: get results in seconds (-S) minutes (-M) hours (-H) days (-D).
+#h:
+#h: Name different measurements with "-n", the starting time point is
+#h: saved in ~/.stopclock/NAME in seconds since epoch. The output format
+#h: is the same as described in `date-diff --help`.
+#L:
+#l: Copyright (c) 2025 Harkaitz Agirre - All rights reserved.
+##:
+. date-diff
+stopclock() {
+    local OPTIND=1 optopt fmt="" start="" name="default" start
+    
+    # Parse command line options.
+    while getopts "SMHDsn:" optopt; do
+        case $optopt in
+            S|M|H|D) fmt="-${optopt}" ;;
+            s)       start="y";;
+            n)       name="${OPTARG}";;
+            \?)      return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+
+    # Start measuring.
+    if test -n "${start}"; then
+        mkdir -p ~/.stopclock
+        date '+@%s' > ~/.stopclock/"${name}"
+    fi
+
+    # Not started.
+    if test ! -f ~/.stopclock/"${name}"; then
+        echo >&2 'stopclock: error: Please start measuring with `stopclock -s`.'
+        return 1
+    fi
+
+    # Get start.
+    read start < ~/.stopclock/"${name}"
+
+    # Print difference.
+    date_diff ${fmt} -- "${start}"
+}
+# --------------------------------------------------------------------
+if test @"${SCRNAME:-$(basename "$0")}" = @"stopclock"; then
+    MSYS_NO_PATHCONV=1
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#[hlL]: \{0,1\}//p' "$0";;
+        *)         stopclock "$@"; exit 0;;
+    esac
+fi
