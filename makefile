@@ -1,4 +1,4 @@
-.POSIX:
+.POSIX: # POSIX Makefile, use make,gmake,pdpmake,bmake
 .SUFFIXES:
 .PHONY: all clean install check
 
@@ -23,3 +23,9 @@ install-sh:
 	cp bin/date-diff $(DESTDIR)$(PREFIX)/bin
 	cp bin/stopclock $(DESTDIR)$(PREFIX)/bin
 ## -- BLOCK:sh --
+## -- BLOCK:agents --
+install: install-ai
+install-ai:
+	install -d $(DESTDIR)$(PREFIX)/share/mcpshell
+	install -m644 pkg/mcpshell/* $(DESTDIR)$(PREFIX)/share/mcpshell
+## -- BLOCK:agents --

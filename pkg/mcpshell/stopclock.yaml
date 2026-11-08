@@ -1,0 +1,61 @@
+mcp:
+  description: |
+    MCPShell tools for the sh-stopclock utilities (date-diff, stopclock).
+  run:
+    shell: bash
+  tools:
+    - name: "date_diff"
+      description: |
+        Print the sum of all time differences sum(abs(TIME2-TIME1),...)
+        between the given time points, via `date-diff`. Times are
+        parsed with date(1) (e.g. "08:46", "2025-03-01", "2025-04-01
+        12:00"). If only one time is given, it's diffed against now.
+      params:
+        unit:
+          type: string
+          description: "Output unit: S (seconds), M (minutes), H (hours), D (days), or empty for combined human-readable format."
+          required: false
+        time1:
+          type: string
+          description: "First time point, parsed with date(1), e.g. '08:46' or '2025-03-01'."
+          required: true
+        time2:
+          type: string
+          description: "Second time point, parsed with date(1). Defaults to now if empty."
+          required: false
+      constraints:
+        - "unit in ['', 'S', 'M', 'H', 'D']"
+        - "time1.size() <= 64"
+        - "!time1.contains(';') && !time1.contains('|') && !time1.contains('&')"
+        - "time2.size() <= 64"
+        - "!time2.contains(';') && !time2.contains('|') && !time2.contains('&')"
+      run:
+        timeout: "10s"
+        command: "date-diff {{ if .unit }}-{{ .unit }}{{ end }} \"{{ .time1 }}\" {{ if .time2 }}\"{{ .time2 }}\"{{ end }}"
+
+    - name: "stopclock"
+      description: |
+        Stateful stopwatch via `stopclock`. Start a named measurement
+        with start=true (records now into ~/.stopclock/NAME), or read
+        its elapsed time with start=false (default). Measurements are
+        named and independent of each other.
+      params:
+        unit:
+          type: string
+          description: "Output unit: S (seconds), M (minutes), H (hours), D (days), or empty for combined human-readable format."
+          required: false
+        name:
+          type: string
+          description: "Name of the stopwatch measurement, stored under ~/.stopclock/NAME. Defaults to 'default' if empty."
+          required: false
+        start:
+          type: boolean
+          description: "If true, (re)start the named measurement at the current time instead of reading it."
+          required: false
+      constraints:
+        - "unit in ['', 'S', 'M', 'H', 'D']"
+        - "name.size() <= 64"
+        - "name.matches('^[A-Za-z0-9_.-]*$')"
+      run:
+        timeout: "10s"
+        command: "stopclock {{ if .unit }}-{{ .unit }}{{ end }} {{ if .start }}-s{{ end }} {{ if .name }}-n \"{{ .name }}\"{{ end }}"
